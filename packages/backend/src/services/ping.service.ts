@@ -69,6 +69,11 @@ export class PingService {
         min_reply: 1,
       });
 
+      // Check if stopped during async operation
+      if (!this.isRunning || !this.callback) {
+        return;
+      }
+
       const latency = res.alive && res.time !== 'unknown' ? parseFloat(String(res.time)) : null;
 
       const result: PingResult = {
@@ -85,6 +90,10 @@ export class PingService {
 
       this.callback.onPing(result, stats);
     } catch (error) {
+      // Check if stopped during async operation
+      if (!this.isRunning || !this.callback) {
+        return;
+      }
       this.callback.onError(
         error instanceof Error ? error : new Error(String(error))
       );
