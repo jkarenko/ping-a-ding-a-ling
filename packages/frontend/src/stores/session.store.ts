@@ -46,6 +46,12 @@ interface SessionState {
   triggerFlash: () => void;
   setHistoricalSessions: (sessions: Session[]) => void;
   selectHistoricalSession: (session: Session | null) => void;
+  loadHistoricalSession: (
+    session: Session,
+    pingResults: PingResult[],
+    deviationEvents: DeviationEvent[],
+    stats: SessionStats | null
+  ) => void;
   toggleTheme: () => void;
   reset: () => void;
 }
@@ -124,6 +130,40 @@ export const useSessionStore = create<SessionState>((set) => ({
       currentSession: session,
       isRunning: false,
     }),
+
+  loadHistoricalSession: (session, pingResults, deviationEvents, stats) => {
+    // Convert PingResult[] to PingResultWithStats[] with empty stats
+    const emptyStats: RollingStats = {
+      mean: 0,
+      median: 0,
+      stdDev: 0,
+      min: 0,
+      max: 0,
+      p95: 0,
+      p99: 0,
+      q1: 0,
+      q3: 0,
+      iqr: 0,
+      jitter: 0,
+      packetLossRate: 0,
+      sampleCount: 0,
+    };
+
+    const resultsWithStats: PingResultWithStats[] = pingResults.map((r) => ({
+      ...r,
+      stats: emptyStats,
+    }));
+
+    set({
+      currentSession: session,
+      selectedHistoricalSession: session,
+      isRunning: false,
+      pingResults: resultsWithStats,
+      deviationEvents,
+      finalStats: stats,
+      latestStats: null,
+    });
+  },
 
   toggleTheme: () =>
     set((state) => {

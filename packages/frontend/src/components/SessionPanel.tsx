@@ -22,7 +22,7 @@ export function SessionPanel() {
     historicalSessions,
     setHistoricalSessions,
     selectedHistoricalSession,
-    selectHistoricalSession,
+    loadHistoricalSession,
     reset,
   } = useSessionStore();
 
@@ -65,7 +65,12 @@ export function SessionPanel() {
     try {
       const response = await fetch(`/api/sessions/${session.id}`);
       const data = await response.json();
-      selectHistoricalSession(data.session);
+      loadHistoricalSession(
+        data.session,
+        data.pingResults || [],
+        data.deviationEvents || [],
+        data.stats || null
+      );
     } catch (error) {
       console.error('Failed to load session:', error);
     } finally {
