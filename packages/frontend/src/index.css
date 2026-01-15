@@ -1,0 +1,47 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* uPlot base styles */
+.uplot,
+.u-title,
+.u-wrap {
+  @apply font-sans;
+}
+
+/* Custom scrollbar for dark mode */
+.dark ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.dark ::-webkit-scrollbar-track {
+  @apply bg-gray-800;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  @apply bg-gray-600 rounded-full;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  @apply bg-gray-500;
+}
+
+/* Flash border animation with reset capability */
+@keyframes flash-border {
+  0% {
+    box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.8), 0 0 20px rgba(239, 68, 68, 0.6);
+  }
+  100% {
+    box-shadow: 0 0 0 4px rgba(239, 68, 68, 0), 0 0 20px rgba(239, 68, 68, 0);
+  }
+}
+
+.flash-border {
+  animation: flash-border 500ms ease-out forwards;
+}
+
+/* Reset animation when key changes */
+.flash-border-reset {
+  animation: none;
+}

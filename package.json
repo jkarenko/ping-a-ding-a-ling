@@ -1,0 +1,21 @@
+{
+  "name": "ping-a-ding-a-ling",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Real-time network latency monitor with sleek web UI",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "npm run dev -w @ping/backend",
+    "dev:frontend": "npm run dev -w @ping/frontend",
+    "build": "npm run build -w @ping/shared && npm run build -w @ping/backend && npm run build -w @ping/frontend",
+    "build:backend": "npm run build -w @ping/backend",
+    "build:frontend": "npm run build -w @ping/frontend"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "typescript": "^5.3.3"
+  }
+}
