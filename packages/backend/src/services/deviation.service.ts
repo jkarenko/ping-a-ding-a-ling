@@ -41,13 +41,13 @@ export class DeviationDetector {
     }
 
     // Check for latency spike based on detection method
-    const latencyDeviation = this.detectLatencySpike(result.latency, stats);
+    const latencyDeviation = this.detectLatencySpike(result.latency, stats, result.timestamp);
     if (latencyDeviation) {
       events.push(latencyDeviation);
     }
 
     // Check for jitter spike
-    const jitterDeviation = this.detectJitterSpike(result.latency, stats);
+    const jitterDeviation = this.detectJitterSpike(result.latency, stats, result.timestamp);
     if (jitterDeviation) {
       events.push(jitterDeviation);
     }
@@ -58,10 +58,9 @@ export class DeviationDetector {
 
   private detectLatencySpike(
     latency: number,
-    stats: RollingStats
+    stats: RollingStats,
+    timestamp: number
   ): DeviationEvent | null {
-    const timestamp = Date.now();
-
     switch (this.settings.detectionMethod) {
       case 'iqr': {
         // IQR-based detection
@@ -111,14 +110,14 @@ export class DeviationDetector {
 
   private detectJitterSpike(
     latency: number,
-    stats: RollingStats
+    stats: RollingStats,
+    timestamp: number
   ): DeviationEvent | null {
     if (this.lastLatency === null) {
       return null;
     }
 
     const delta = Math.abs(latency - this.lastLatency);
-    const timestamp = Date.now();
 
     // Calculate jitter threshold
     let threshold: number;
