@@ -64,16 +64,30 @@ export function setupSessionRoutes(fastify: FastifyInstance): void {
     const pingResults = getPingResults(id);
     const deviationEvents = getDeviationEvents(id);
 
-    // Create a map of deviations by timestamp for quick lookup
-    const deviationMap = new Map<number, string>();
-    for (const event of deviationEvents) {
-      deviationMap.set(event.timestamp, event.type);
-    }
+    // Sort deviations by timestamp for efficient matching
+    const sortedDeviations = [...deviationEvents].sort((a, b) => a.timestamp - b.timestamp);
+
+    // Match deviations to ping results by finding closest timestamp within tolerance
+    const tolerance = session.interval + 50; // ping interval + small buffer
+
+    const findDeviation = (pingTimestamp: number): string => {
+      for (const deviation of sortedDeviations) {
+        const diff = Math.abs(deviation.timestamp - pingTimestamp);
+        if (diff <= tolerance) {
+          return deviation.type;
+        }
+        // Since sorted, if we're past the tolerance window, stop searching
+        if (deviation.timestamp > pingTimestamp + tolerance) {
+          break;
+        }
+      }
+      return '';
+    };
 
     // Generate CSV
     const headers = ['timestamp', 'latency_ms', 'seq', 'deviation_type'];
     const rows = pingResults.map((result) => {
-      const deviation = deviationMap.get(result.timestamp) || '';
+      const deviation = findDeviation(result.timestamp);
       return [
         result.timestamp.toString(),
         result.latency?.toString() || '',
