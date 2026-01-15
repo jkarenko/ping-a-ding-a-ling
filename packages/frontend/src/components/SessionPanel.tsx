@@ -22,6 +22,7 @@ export function SessionPanel() {
     historicalSessions,
     setHistoricalSessions,
     selectedHistoricalSession,
+    selectHistoricalSession,
     loadHistoricalSession,
     reset,
   } = useSessionStore();
@@ -69,7 +70,8 @@ export function SessionPanel() {
         data.session,
         data.pingResults || [],
         data.deviationEvents || [],
-        data.stats || null
+        data.stats || null,
+        data.analysis || null
       );
     } catch (error) {
       console.error('Failed to load session:', error);

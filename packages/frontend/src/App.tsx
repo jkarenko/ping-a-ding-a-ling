@@ -6,6 +6,7 @@ import { FlashBorder } from './components/FlashBorder';
 import { DeviationLog } from './components/DeviationLog';
 import { SettingsPanel } from './components/SettingsPanel';
 import { SessionPanel } from './components/SessionPanel';
+import { AnalysisPanel } from './components/AnalysisPanel';
 import { exportGraphAsPNG } from './utils/export';
 
 function App() {
@@ -123,6 +124,11 @@ function App() {
                 />
               </div>
             )}
+
+            {/* Session Analysis (shown for historical sessions) */}
+            <div className="mt-4">
+              <AnalysisPanel />
+            </div>
           </div>
 
           {/* Right sidebar - Deviation Log */}

@@ -128,3 +128,64 @@ export type ServerMessage =
   | WSMessage<Session>
   | WSMessage<{ sessionId: string; stats: SessionStats }>
   | WSMessage<{ message: string }>;
+
+// Session Analysis Types
+
+// Threshold count at a specific latency level
+export interface ThresholdCount {
+  thresholdMs: number;
+  count: number;
+  percentage: number;
+}
+
+// A burst of latency spikes
+export interface LatencyBurst {
+  index: number;
+  startTimestamp: number;
+  endTimestamp: number;
+  sampleCount: number;
+  maxLatency: number;
+  meanLatency: number;
+}
+
+// Quality grade based on analysis
+export type QualityGrade = 'A' | 'B' | 'C' | 'D' | 'F';
+
+// Complete session analysis
+export interface SessionAnalysis {
+  sessionId: string;
+  computedAt: number;
+
+  // Timing metrics
+  spanSeconds: number;
+  sampleCount: number;
+  samplingIntervalMean: number;
+  samplingIntervalMedian: number;
+  samplingIntervalP95: number;
+
+  // Latency distribution
+  latencyMin: number;
+  latencyMean: number;
+  latencyMedian: number;
+  latencyP95: number;
+  latencyP99: number;
+  latencyMax: number;
+  latencyStdDev: number;
+
+  // Tail-risk thresholds
+  thresholds: ThresholdCount[];
+
+  // Burst analysis
+  burstCount: number;
+  burstSizeMedian: number;
+  burstSizeMax: number;
+  interBurstIntervalMedian: number | null;
+  interBurstIntervalP95: number | null;
+
+  // Bursts detail (optional, for drill-down)
+  bursts: LatencyBurst[];
+
+  // Quality assessment
+  qualityGrade: QualityGrade;
+  qualitySummary: string;
+}

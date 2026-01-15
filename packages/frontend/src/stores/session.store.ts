@@ -6,6 +6,7 @@ import type {
   DeviationEvent,
   RollingStats,
   SessionStats,
+  SessionAnalysis,
 } from '@ping/shared';
 import { DEFAULT_SESSION_SETTINGS } from '@ping/shared';
 
@@ -29,6 +30,9 @@ interface SessionState {
   // Final stats (after session ends)
   finalStats: SessionStats | null;
 
+  // Session analysis
+  sessionAnalysis: SessionAnalysis | null;
+
   // Historical sessions
   historicalSessions: Session[];
   selectedHistoricalSession: Session | null;
@@ -50,8 +54,10 @@ interface SessionState {
     session: Session,
     pingResults: PingResult[],
     deviationEvents: DeviationEvent[],
-    stats: SessionStats | null
+    stats: SessionStats | null,
+    analysis: SessionAnalysis | null
   ) => void;
+  setSessionAnalysis: (analysis: SessionAnalysis | null) => void;
   toggleTheme: () => void;
   reset: () => void;
 }
@@ -65,6 +71,7 @@ export const useSessionStore = create<SessionState>((set) => ({
   deviationEvents: [],
   latestStats: null,
   finalStats: null,
+  sessionAnalysis: null,
   historicalSessions: [],
   selectedHistoricalSession: null,
   flashKey: 0,
@@ -131,7 +138,7 @@ export const useSessionStore = create<SessionState>((set) => ({
       isRunning: false,
     }),
 
-  loadHistoricalSession: (session, pingResults, deviationEvents, stats) => {
+  loadHistoricalSession: (session, pingResults, deviationEvents, stats, analysis) => {
     // Convert PingResult[] to PingResultWithStats[] with empty stats
     const emptyStats: RollingStats = {
       mean: 0,
@@ -161,9 +168,15 @@ export const useSessionStore = create<SessionState>((set) => ({
       pingResults: resultsWithStats,
       deviationEvents,
       finalStats: stats,
+      sessionAnalysis: analysis,
       latestStats: null,
     });
   },
+
+  setSessionAnalysis: (analysis) =>
+    set({
+      sessionAnalysis: analysis,
+    }),
 
   toggleTheme: () =>
     set((state) => {
@@ -185,6 +198,7 @@ export const useSessionStore = create<SessionState>((set) => ({
       deviationEvents: [],
       latestStats: null,
       finalStats: null,
+      sessionAnalysis: null,
       selectedHistoricalSession: null,
     }),
 }));

@@ -18,7 +18,10 @@ import {
   savePingResult,
   saveDeviationEvent,
   saveSessionStats,
+  getPingResults,
+  saveSessionAnalysis,
 } from '../db/queries.js';
+import { computeSessionAnalysis } from '../services/analysis.service.js';
 import { randomUUID } from 'crypto';
 
 interface ActiveSession {
@@ -226,6 +229,13 @@ function stopSession(socket: WebSocket, active: ActiveSession): void {
   // End session in database
   const endedAt = Date.now();
   endSession(session.id, endedAt);
+
+  // Compute and save analysis
+  const allPingResults = getPingResults(session.id);
+  if (allPingResults.length > 0) {
+    const analysis = computeSessionAnalysis(session.id, allPingResults);
+    saveSessionAnalysis(analysis);
+  }
 
   // Send session ended message
   sendMessage(socket, 'session_ended', {

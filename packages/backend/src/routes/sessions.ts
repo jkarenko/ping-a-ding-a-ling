@@ -6,7 +6,10 @@ import {
   getPingResults,
   getDeviationEvents,
   getSessionStats,
+  getSessionAnalysis,
+  saveSessionAnalysis,
 } from '../db/queries.js';
+import { computeSessionAnalysis } from '../services/analysis.service.js';
 
 export function setupSessionRoutes(fastify: FastifyInstance): void {
   // Get all sessions
@@ -28,12 +31,14 @@ export function setupSessionRoutes(fastify: FastifyInstance): void {
     const pingResults = getPingResults(id);
     const deviationEvents = getDeviationEvents(id);
     const stats = getSessionStats(id);
+    const analysis = getSessionAnalysis(id);
 
     return {
       session,
       pingResults,
       deviationEvents,
       stats,
+      analysis,
     };
   });
 
@@ -140,4 +145,66 @@ export function setupSessionRoutes(fastify: FastifyInstance): void {
       return { success: true };
     }
   );
+
+  // Get session analysis
+  fastify.get<{ Params: { id: string } }>('/api/sessions/:id/analysis', async (request, reply) => {
+    const { id } = request.params;
+    const session = getSession(id);
+
+    if (!session) {
+      reply.code(404);
+      return { error: 'Session not found' };
+    }
+
+    let analysis = getSessionAnalysis(id);
+
+    // If analysis doesn't exist, compute it now (for historical sessions)
+    if (!analysis) {
+      const pingResults = getPingResults(id);
+      if (pingResults.length > 0) {
+        analysis = computeSessionAnalysis(id, pingResults);
+        saveSessionAnalysis(analysis);
+      }
+    }
+
+    if (!analysis) {
+      reply.code(404);
+      return { error: 'No data available for analysis' };
+    }
+
+    return { analysis };
+  });
+
+  // Export analysis as JSON
+  fastify.get<{ Params: { id: string } }>('/api/sessions/:id/export/analysis', async (request, reply) => {
+    const { id } = request.params;
+    const session = getSession(id);
+
+    if (!session) {
+      reply.code(404);
+      return { error: 'Session not found' };
+    }
+
+    let analysis = getSessionAnalysis(id);
+
+    if (!analysis) {
+      const pingResults = getPingResults(id);
+      if (pingResults.length > 0) {
+        analysis = computeSessionAnalysis(id, pingResults);
+        saveSessionAnalysis(analysis);
+      }
+    }
+
+    if (!analysis) {
+      reply.code(404);
+      return { error: 'No data available for analysis' };
+    }
+
+    reply.header('Content-Type', 'application/json');
+    reply.header(
+      'Content-Disposition',
+      `attachment; filename="session-${id}-analysis.json"`
+    );
+    return analysis;
+  });
 }

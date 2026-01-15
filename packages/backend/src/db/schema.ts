@@ -100,6 +100,66 @@ export function initDatabase(): void {
     )
   `);
 
+  // Create session_analysis table for post-session analysis
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS session_analysis (
+      session_id TEXT PRIMARY KEY,
+      computed_at INTEGER NOT NULL,
+
+      -- Timing metrics
+      span_seconds REAL NOT NULL,
+      sample_count INTEGER NOT NULL,
+      sampling_interval_mean REAL NOT NULL,
+      sampling_interval_median REAL NOT NULL,
+      sampling_interval_p95 REAL NOT NULL,
+
+      -- Latency distribution
+      latency_min REAL NOT NULL,
+      latency_mean REAL NOT NULL,
+      latency_median REAL NOT NULL,
+      latency_p95 REAL NOT NULL,
+      latency_p99 REAL NOT NULL,
+      latency_max REAL NOT NULL,
+      latency_std_dev REAL NOT NULL,
+
+      -- Tail-risk thresholds (stored as JSON)
+      thresholds TEXT NOT NULL,
+
+      -- Burst analysis
+      burst_count INTEGER NOT NULL,
+      burst_size_median REAL,
+      burst_size_max INTEGER,
+      inter_burst_interval_median REAL,
+      inter_burst_interval_p95 REAL,
+
+      -- Quality assessment
+      quality_grade TEXT NOT NULL,
+      quality_summary TEXT NOT NULL,
+
+      FOREIGN KEY (session_id) REFERENCES sessions(id)
+    )
+  `);
+
+  // Create session_bursts table for detailed burst data
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS session_bursts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      session_id TEXT NOT NULL,
+      burst_index INTEGER NOT NULL,
+      start_timestamp INTEGER NOT NULL,
+      end_timestamp INTEGER NOT NULL,
+      sample_count INTEGER NOT NULL,
+      max_latency REAL NOT NULL,
+      mean_latency REAL NOT NULL,
+      FOREIGN KEY (session_id) REFERENCES sessions(id)
+    )
+  `);
+
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_session_bursts_session_id
+    ON session_bursts(session_id)
+  `);
+
   console.log('Database initialized at', DB_PATH);
 }
 
