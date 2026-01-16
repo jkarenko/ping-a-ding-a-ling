@@ -28,6 +28,35 @@ function copyRecursive(src, dest) {
   }
 }
 
+/**
+ * Rewrite @ping/shared imports to relative paths.
+ * This is needed because @ping/shared is a workspace package not published to npm.
+ */
+function rewriteSharedImports(dir, depth = 0) {
+  const files = fs.readdirSync(dir);
+
+  for (const file of files) {
+    const filePath = path.join(dir, file);
+    const stats = fs.statSync(filePath);
+
+    if (stats.isDirectory()) {
+      // Don't process shared or frontend directories
+      if (file !== 'shared' && file !== 'frontend') {
+        rewriteSharedImports(filePath, depth + 1);
+      }
+    } else if (file.endsWith('.js')) {
+      let content = fs.readFileSync(filePath, 'utf-8');
+
+      if (content.includes('@ping/shared')) {
+        // Calculate relative path to shared based on depth
+        const relativePath = depth === 0 ? './shared/index.js' : '../'.repeat(depth) + 'shared/index.js';
+        content = content.replace(/@ping\/shared/g, relativePath);
+        fs.writeFileSync(filePath, content);
+      }
+    }
+  }
+}
+
 function main() {
   console.log('Copying distribution files...');
 
@@ -48,6 +77,10 @@ function main() {
   // Copy shared dist to dist/shared (in case it's needed)
   console.log('Copying shared...');
   copyRecursive(sharedDistDir, path.join(distDir, 'shared'));
+
+  // Rewrite @ping/shared imports to relative paths
+  console.log('Rewriting shared imports...');
+  rewriteSharedImports(distDir);
 
   // Ensure cli.js has shebang and is executable
   const cliPath = path.join(distDir, 'cli.js');
