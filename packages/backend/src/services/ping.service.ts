@@ -1,5 +1,5 @@
-import ping from 'ping';
 import type { PingResult, SessionSettings, RollingStats } from '@ping/shared';
+import { execPing } from './ping-native.service.js';
 
 export interface PingCallback {
   onPing: (result: PingResult, stats: RollingStats) => void;
@@ -64,17 +64,15 @@ export class PingService {
     this.seq++;
 
     try {
-      const res = await ping.promise.probe(this.target, {
-        timeout: Math.max(1, Math.floor(this.interval / 1000)), // timeout in seconds
-        min_reply: 1,
-      });
+      const timeoutSeconds = Math.max(1, Math.floor(this.interval / 1000));
+      const res = await execPing(this.target, timeoutSeconds);
 
       // Check if stopped during async operation
       if (!this.isRunning || !this.callback) {
         return;
       }
 
-      const latency = res.alive && res.time !== 'unknown' ? parseFloat(String(res.time)) : null;
+      const latency = res.alive && res.time !== null ? res.time : null;
 
       const result: PingResult = {
         timestamp,
