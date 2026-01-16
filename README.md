@@ -6,6 +6,10 @@ A real-time network latency monitor for diagnosing router problems, flaky connec
 
 The app continuously pings a target (your router, a DNS server, whatever) and visualizes latency, jitter, and packet loss in real-time. It detects anomalies using statistical analysis and logs deviations so you can spot patterns.
 
+## Prerequisites
+
+[Node.js](https://nodejs.org/) v18 or later.
+
 ## Running
 
 ```bash
