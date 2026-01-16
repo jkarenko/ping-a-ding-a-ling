@@ -1,10 +1,33 @@
 import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
-import { fileURLToPath } from 'url';
+import os from 'os';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const DB_PATH = path.join(__dirname, '..', '..', 'data', 'ping.db');
+/**
+ * Get the platform-specific user data directory for storing the database.
+ * - Windows: %APPDATA%/ping-a-ding-a-ling/
+ * - macOS: ~/Library/Application Support/ping-a-ding-a-ling/
+ * - Linux: ~/.local/share/ping-a-ding-a-ling/
+ */
+function getDataDirectory(): string {
+  const appName = 'ping-a-ding-a-ling';
+  const platform = os.platform();
+
+  if (platform === 'win32') {
+    // Windows: use APPDATA
+    const appData = process.env.APPDATA || path.join(os.homedir(), 'AppData', 'Roaming');
+    return path.join(appData, appName);
+  } else if (platform === 'darwin') {
+    // macOS: use Application Support
+    return path.join(os.homedir(), 'Library', 'Application Support', appName);
+  } else {
+    // Linux and others: use XDG_DATA_HOME or ~/.local/share
+    const dataHome = process.env.XDG_DATA_HOME || path.join(os.homedir(), '.local', 'share');
+    return path.join(dataHome, appName);
+  }
+}
+
+const DB_PATH = path.join(getDataDirectory(), 'ping.db');
 
 let db: Database.Database | null = null;
 

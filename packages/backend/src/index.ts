@@ -1,12 +1,19 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import websocket from '@fastify/websocket';
+import fastifyStatic from '@fastify/static';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { setupWebSocketRoutes } from './routes/websocket.js';
 import { setupSessionRoutes } from './routes/sessions.js';
 import { initDatabase } from './db/schema.js';
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = parseInt(process.env.PORT || '3001', 10);
 const HOST = process.env.HOST || '0.0.0.0';
+
+// Check if we're running in production mode (serving static files)
+const isProduction = process.env.NODE_ENV === 'production' || process.env.SERVE_STATIC === 'true';
 
 async function main() {
   const fastify = Fastify({
@@ -40,6 +47,23 @@ async function main() {
   fastify.get('/api/health', async () => {
     return { status: 'ok', timestamp: Date.now() };
   });
+
+  // Serve static files in production mode
+  if (isProduction) {
+    const staticPath = path.join(__dirname, '..', '..', 'frontend', 'dist');
+    await fastify.register(fastifyStatic, {
+      root: staticPath,
+      prefix: '/',
+    });
+
+    // SPA fallback - serve index.html for non-API routes
+    fastify.setNotFoundHandler((request, reply) => {
+      if (!request.url.startsWith('/api/') && !request.url.startsWith('/ws')) {
+        return reply.sendFile('index.html');
+      }
+      return reply.status(404).send({ error: 'Not found' });
+    });
+  }
 
   // Start server
   try {
