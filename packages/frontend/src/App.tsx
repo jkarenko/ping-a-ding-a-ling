@@ -10,13 +10,45 @@ import { AnalysisPanel } from './components/AnalysisPanel';
 import { exportGraphAsPNG } from './utils/export';
 
 function App() {
-  const { theme, toggleTheme, latestStats, isRunning } = useSessionStore();
+  const { theme, toggleTheme, latestStats, finalStats, isRunning, currentSession, setSessionAnalysis } = useSessionStore();
 
-  // Initialize theme on mount
+  // Apply persisted theme on mount
   useEffect(() => {
-    // Default to dark mode
-    document.documentElement.classList.add('dark');
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
   }, []);
+
+  // Run analysis every 10 seconds during active monitoring
+  useEffect(() => {
+    if (!isRunning || !currentSession) return;
+
+    const runAnalysis = async () => {
+      try {
+        const response = await fetch(`/api/sessions/${currentSession.id}/analysis?live=true`);
+        if (response.ok) {
+          const data = await response.json();
+          setSessionAnalysis(data.analysis);
+        }
+      } catch {
+        // Silently ignore errors during live analysis
+      }
+    };
+
+    // Run immediately after first 10 seconds, then every 10 seconds
+    const timeoutId = setTimeout(() => {
+      runAnalysis();
+    }, 10000);
+
+    const intervalId = setInterval(runAnalysis, 10000);
+
+    return () => {
+      clearTimeout(timeoutId);
+      clearInterval(intervalId);
+    };
+  }, [isRunning, currentSession, setSessionAnalysis]);
 
   const handleExportPNG = async () => {
     try {
@@ -99,28 +131,28 @@ function App() {
               </div>
             </FlashBorder>
 
-            {/* Live stats cards */}
-            {latestStats && (
+            {/* Stats cards - show live stats during monitoring, final stats for history */}
+            {(latestStats || finalStats) && (
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-4">
                 <StatCard
                   label="Mean"
-                  value={`${latestStats.mean.toFixed(2)}ms`}
+                  value={`${(latestStats?.mean ?? finalStats?.latencyMean ?? 0).toFixed(2)}ms`}
                   color="green"
                 />
                 <StatCard
                   label="P95"
-                  value={`${latestStats.p95.toFixed(2)}ms`}
+                  value={`${(latestStats?.p95 ?? finalStats?.latencyP95 ?? 0).toFixed(2)}ms`}
                   color="yellow"
                 />
                 <StatCard
                   label="Jitter"
-                  value={`${latestStats.jitter.toFixed(2)}ms`}
+                  value={`${(latestStats?.jitter ?? finalStats?.jitterMean ?? 0).toFixed(2)}ms`}
                   color="blue"
                 />
                 <StatCard
                   label="Loss"
-                  value={`${latestStats.packetLossRate.toFixed(1)}%`}
-                  color={latestStats.packetLossRate > 0 ? 'red' : 'green'}
+                  value={`${(latestStats?.packetLossRate ?? finalStats?.packetLoss ?? 0).toFixed(1)}%`}
+                  color={(latestStats?.packetLossRate ?? finalStats?.packetLoss ?? 0) > 0 ? 'red' : 'green'}
                 />
               </div>
             )}

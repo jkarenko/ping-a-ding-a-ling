@@ -184,8 +184,8 @@ function startSession(
       // Send ping result with stats
       sendMessage(socket, 'ping_result', { ...result, stats: statsWithPacketLoss });
 
-      // Batch save every 100 pings
-      if (activeSession.pingResults.length >= 100) {
+      // Batch save every 10 pings (~1 second at 100ms interval)
+      if (activeSession.pingResults.length >= 10) {
         flushPingResults(activeSession, session.id);
       }
     },
@@ -232,15 +232,17 @@ function stopSession(socket: WebSocket, active: ActiveSession): void {
 
   // Compute and save analysis
   const allPingResults = getPingResults(session.id);
+  let analysis = null;
   if (allPingResults.length > 0) {
-    const analysis = computeSessionAnalysis(session.id, allPingResults);
+    analysis = computeSessionAnalysis(session.id, allPingResults);
     saveSessionAnalysis(analysis);
   }
 
-  // Send session ended message
+  // Send session ended message with analysis
   sendMessage(socket, 'session_ended', {
     sessionId: session.id,
     stats,
+    analysis,
   });
 
   // Remove from active sessions

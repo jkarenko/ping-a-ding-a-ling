@@ -1,18 +1,24 @@
-import { useState } from 'react';
 import { Settings, ChevronDown, ChevronUp } from 'lucide-react';
 import type { DetectionMethod } from '@ping/shared';
 import { useSessionStore } from '../stores/session.store';
+import { Tooltip } from './Tooltip';
 
 export function SettingsPanel() {
-  const { settings, setSettings, isRunning } = useSessionStore();
-  const [expanded, setExpanded] = useState(false);
+  const { settings, setSettings, isRunning, uiState, setUIState } = useSessionStore();
+
+  const expanded = uiState.showAdvancedSettings;
+  const setExpanded = (show: boolean) => setUIState({ showAdvancedSettings: show });
 
   const handleTargetChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSettings({ target: e.target.value });
   };
 
   const handleIntervalChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setSettings({ interval: parseInt(e.target.value, 10) });
+    const newInterval = parseInt(e.target.value, 10);
+    // Recalculate rolling window ping count to maintain the same time window
+    const currentWindowSeconds = Math.round((settings.rollingWindowSize * settings.interval) / 1000);
+    const newPingCount = Math.round((currentWindowSeconds * 1000) / newInterval);
+    setSettings({ interval: newInterval, rollingWindowSize: newPingCount });
   };
 
   const handleDetectionMethodChange = (method: DetectionMethod) => {
@@ -38,8 +44,17 @@ export function SettingsPanel() {
   };
 
   const handleRollingWindowChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setSettings({ rollingWindowSize: parseInt(e.target.value, 10) });
+    // Value is in seconds, convert to ping count based on interval
+    const seconds = parseInt(e.target.value, 10);
+    const pingCount = Math.round((seconds * 1000) / settings.interval);
+    setSettings({ rollingWindowSize: pingCount });
   };
+
+  // Calculate current window in seconds from ping count
+  const windowSeconds = Math.round((settings.rollingWindowSize * settings.interval) / 1000);
+
+  // Calculate ping count for a given window in seconds
+  const getPingCount = (seconds: number) => Math.round((seconds * 1000) / settings.interval);
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
@@ -124,9 +139,12 @@ export function SettingsPanel() {
         <div className="p-4 pt-0 space-y-4 border-t border-gray-200 dark:border-gray-700">
           {/* Detection method */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Detection method
-            </label>
+            <div className="flex items-center gap-1 mb-2">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                Detection method
+              </label>
+              <Tooltip content="Choose how deviations are detected. IQR is robust against outliers, Z-score assumes normal distribution, Manual lets you set fixed thresholds." />
+            </div>
             <div className="space-y-2">
               <label className="flex items-center gap-2">
                 <input
@@ -140,6 +158,7 @@ export function SettingsPanel() {
                 <span className="text-sm text-gray-700 dark:text-gray-300">
                   IQR-based (recommended)
                 </span>
+                <Tooltip content="Interquartile Range method. Calculates Q1 (25th percentile) and Q3 (75th percentile), then flags values beyond Q3 + multiplier × IQR. More robust to existing outliers in data." />
               </label>
               <label className="flex items-center gap-2">
                 <input
@@ -153,6 +172,7 @@ export function SettingsPanel() {
                 <span className="text-sm text-gray-700 dark:text-gray-300">
                   Z-score based
                 </span>
+                <Tooltip content="Statistical method measuring how many standard deviations a value is from the mean. Works best when latency follows a normal distribution. Z-score of 2 means ~95% of normal values are below threshold." />
               </label>
               <label className="flex items-center gap-2">
                 <input
@@ -166,6 +186,7 @@ export function SettingsPanel() {
                 <span className="text-sm text-gray-700 dark:text-gray-300">
                   Manual threshold
                 </span>
+                <Tooltip content="Set explicit millisecond thresholds for latency and jitter. Any value exceeding your threshold triggers a deviation. Simple and predictable." />
               </label>
             </div>
           </div>
@@ -173,12 +194,15 @@ export function SettingsPanel() {
           {/* IQR settings */}
           {settings.detectionMethod === 'iqr' && (
             <div>
-              <label
-                htmlFor="iqrMultiplier"
-                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
-              >
-                IQR multiplier
-              </label>
+              <div className="flex items-center gap-1 mb-1">
+                <label
+                  htmlFor="iqrMultiplier"
+                  className="text-sm font-medium text-gray-700 dark:text-gray-300"
+                >
+                  IQR multiplier
+                </label>
+                <Tooltip content="Multiplier for IQR to determine outlier threshold. 1.5× detects mild outliers (more sensitive), 3× detects only extreme outliers (less sensitive). Threshold = Q3 + multiplier × IQR." />
+              </div>
               <select
                 id="iqrMultiplier"
                 value={settings.iqrMultiplier}
@@ -196,12 +220,15 @@ export function SettingsPanel() {
           {/* Z-score settings */}
           {settings.detectionMethod === 'zscore' && (
             <div>
-              <label
-                htmlFor="zScoreThreshold"
-                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
-              >
-                Z-score threshold
-              </label>
+              <div className="flex items-center gap-1 mb-1">
+                <label
+                  htmlFor="zScoreThreshold"
+                  className="text-sm font-medium text-gray-700 dark:text-gray-300"
+                >
+                  Z-score threshold
+                </label>
+                <Tooltip content="Number of standard deviations from mean to trigger deviation. Lower = more sensitive. 1.5 catches ~93% outliers, 2.0 catches ~95%, 3.0 catches ~99.7% (very conservative)." />
+              </div>
               <select
                 id="zScoreThreshold"
                 value={settings.zScoreThreshold}
@@ -222,12 +249,15 @@ export function SettingsPanel() {
           {settings.detectionMethod === 'manual' && (
             <>
               <div>
-                <label
-                  htmlFor="manualLatency"
-                  className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
-                >
-                  Latency threshold (ms)
-                </label>
+                <div className="flex items-center gap-1 mb-1">
+                  <label
+                    htmlFor="manualLatency"
+                    className="text-sm font-medium text-gray-700 dark:text-gray-300"
+                  >
+                    Latency threshold (ms)
+                  </label>
+                  <Tooltip content="Fixed latency threshold in milliseconds. Any ping exceeding this value triggers a latency spike deviation. For local network, 10-20ms is typical. For internet, 50-100ms is common." />
+                </div>
                 <input
                   type="number"
                   id="manualLatency"
@@ -242,12 +272,15 @@ export function SettingsPanel() {
                 />
               </div>
               <div>
-                <label
-                  htmlFor="manualJitter"
-                  className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
-                >
-                  Jitter threshold (ms)
-                </label>
+                <div className="flex items-center gap-1 mb-1">
+                  <label
+                    htmlFor="manualJitter"
+                    className="text-sm font-medium text-gray-700 dark:text-gray-300"
+                  >
+                    Jitter threshold (ms)
+                  </label>
+                  <Tooltip content="Fixed jitter threshold in milliseconds. Jitter is the variation between consecutive pings. High jitter (>5ms) can cause stuttering in real-time applications like gaming or video calls." />
+                </div>
                 <input
                   type="number"
                   id="manualJitter"
@@ -266,24 +299,27 @@ export function SettingsPanel() {
 
           {/* Rolling window size */}
           <div>
-            <label
-              htmlFor="rollingWindow"
-              className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
-            >
-              Rolling window size
-            </label>
+            <div className="flex items-center gap-1 mb-1">
+              <label
+                htmlFor="rollingWindow"
+                className="text-sm font-medium text-gray-700 dark:text-gray-300"
+              >
+                Rolling window size
+              </label>
+              <Tooltip content="Time window for calculating statistics and detecting deviations. Shorter windows react faster to changes but may be noisier. Longer windows are more stable but slower to detect issues." />
+            </div>
             <select
               id="rollingWindow"
-              value={settings.rollingWindowSize}
+              value={windowSeconds}
               onChange={handleRollingWindowChange}
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md
                          bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100
                          focus:ring-2 focus:ring-green-500 focus:border-transparent"
             >
-              <option value="50">50 pings (~5 sec)</option>
-              <option value="100">100 pings (~10 sec)</option>
-              <option value="200">200 pings (~20 sec)</option>
-              <option value="500">500 pings (~50 sec)</option>
+              <option value="5">5s ({getPingCount(5)} pings)</option>
+              <option value="10">10s ({getPingCount(10)} pings)</option>
+              <option value="20">20s ({getPingCount(20)} pings)</option>
+              <option value="50">50s ({getPingCount(50)} pings)</option>
             </select>
           </div>
         </div>

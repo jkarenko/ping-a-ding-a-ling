@@ -1,5 +1,5 @@
 import { useEffect, useRef, useCallback } from 'react';
-import type { SessionSettings, ClientMessage } from '@ping/shared';
+import type { SessionSettings, ClientMessage, SessionAnalysis } from '@ping/shared';
 import { useSessionStore } from '../stores/session.store';
 
 type WSStatus = 'connecting' | 'connected' | 'disconnected' | 'error';
@@ -15,6 +15,7 @@ export function useWebSocket() {
     addPingResult,
     addDeviation,
     triggerFlash,
+    setSessionAnalysis,
   } = useSessionStore();
 
   const connect = useCallback(() => {
@@ -73,8 +74,15 @@ export function useWebSocket() {
           break;
 
         case 'session_ended':
-          const endPayload = message.payload as { sessionId: string; stats: Parameters<typeof endSession>[0] };
+          const endPayload = message.payload as {
+            sessionId: string;
+            stats: Parameters<typeof endSession>[0];
+            analysis: SessionAnalysis | null;
+          };
           endSession(endPayload.stats);
+          if (endPayload.analysis) {
+            setSessionAnalysis(endPayload.analysis);
+          }
           break;
 
         case 'ping_result':
@@ -82,8 +90,9 @@ export function useWebSocket() {
           break;
 
         case 'deviation':
-          addDeviation(message.payload as Parameters<typeof addDeviation>[0]);
-          triggerFlash();
+          const deviation = message.payload as Parameters<typeof addDeviation>[0];
+          addDeviation(deviation);
+          triggerFlash(deviation.type);
           break;
 
         case 'error':
@@ -92,7 +101,7 @@ export function useWebSocket() {
           break;
       }
     },
-    [startSession, endSession, addPingResult, addDeviation, triggerFlash]
+    [startSession, endSession, addPingResult, addDeviation, triggerFlash, setSessionAnalysis]
   );
 
   const sendMessage = useCallback((message: ClientMessage) => {

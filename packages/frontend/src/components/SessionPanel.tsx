@@ -10,7 +10,7 @@ import {
   ChevronUp,
 } from 'lucide-react';
 import type { Session } from '@ping/shared';
-import { useSessionStore } from '../stores/session.store';
+import { useSessionStore, loadSelectedSessionId } from '../stores/session.store';
 import { useWebSocket } from '../hooks/useWebSocket';
 
 export function SessionPanel() {
@@ -25,15 +25,45 @@ export function SessionPanel() {
     selectHistoricalSession,
     loadHistoricalSession,
     reset,
+    uiState,
+    setUIState,
   } = useSessionStore();
 
   const { startPingSession, stopPingSession } = useWebSocket();
-  const [showHistory, setShowHistory] = useState(false);
   const [loadingSessionId, setLoadingSessionId] = useState<string | null>(null);
 
-  // Fetch historical sessions on mount
+  const setShowHistory = (show: boolean) => setUIState({ showHistory: show });
+
+  // Fetch historical sessions on mount and restore persisted selection
   useEffect(() => {
-    fetchSessions();
+    const initSessions = async () => {
+      try {
+        const response = await fetch('/api/sessions');
+        const data = await response.json();
+        setHistoricalSessions(data.sessions);
+
+        // Restore persisted session selection
+        const persistedSessionId = loadSelectedSessionId();
+        if (persistedSessionId) {
+          const session = data.sessions.find((s: Session) => s.id === persistedSessionId);
+          if (session) {
+            // Load the full session data
+            const sessionResponse = await fetch(`/api/sessions/${persistedSessionId}`);
+            const sessionData = await sessionResponse.json();
+            loadHistoricalSession(
+              sessionData.session,
+              sessionData.pingResults || [],
+              sessionData.deviationEvents || [],
+              sessionData.stats || null,
+              sessionData.analysis || null
+            );
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch sessions:', error);
+      }
+    };
+    initSessions();
   }, []);
 
   const fetchSessions = async () => {
@@ -180,7 +210,7 @@ export function SessionPanel() {
 
       {/* History toggle */}
       <button
-        onClick={() => setShowHistory(!showHistory)}
+        onClick={() => setShowHistory(!uiState.showHistory)}
         className="w-full flex items-center justify-between px-4 py-2
                    bg-white dark:bg-gray-800 rounded-lg shadow
                    text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50"
@@ -194,7 +224,7 @@ export function SessionPanel() {
             </span>
           )}
         </div>
-        {showHistory ? (
+        {uiState.showHistory ? (
           <ChevronUp className="w-4 h-4" />
         ) : (
           <ChevronDown className="w-4 h-4" />
@@ -202,7 +232,7 @@ export function SessionPanel() {
       </button>
 
       {/* Session history list */}
-      {showHistory && (
+      {uiState.showHistory && (
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
           {historicalSessions.length === 0 ? (
             <div className="p-4 text-sm text-gray-500 dark:text-gray-400 text-center">

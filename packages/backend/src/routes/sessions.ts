@@ -147,33 +147,47 @@ export function setupSessionRoutes(fastify: FastifyInstance): void {
   );
 
   // Get session analysis
-  fastify.get<{ Params: { id: string } }>('/api/sessions/:id/analysis', async (request, reply) => {
-    const { id } = request.params;
-    const session = getSession(id);
+  fastify.get<{ Params: { id: string }; Querystring: { live?: string } }>(
+    '/api/sessions/:id/analysis',
+    async (request, reply) => {
+      const { id } = request.params;
+      const isLive = request.query.live === 'true';
+      const session = getSession(id);
 
-    if (!session) {
-      reply.code(404);
-      return { error: 'Session not found' };
-    }
-
-    let analysis = getSessionAnalysis(id);
-
-    // If analysis doesn't exist, compute it now (for historical sessions)
-    if (!analysis) {
-      const pingResults = getPingResults(id);
-      if (pingResults.length > 0) {
-        analysis = computeSessionAnalysis(id, pingResults);
-        saveSessionAnalysis(analysis);
+      if (!session) {
+        reply.code(404);
+        return { error: 'Session not found' };
       }
-    }
 
-    if (!analysis) {
-      reply.code(404);
-      return { error: 'No data available for analysis' };
-    }
+      let analysis = null;
 
-    return { analysis };
-  });
+      // For live sessions, always compute fresh (don't use cached)
+      if (isLive) {
+        const pingResults = getPingResults(id);
+        if (pingResults.length > 0) {
+          analysis = computeSessionAnalysis(id, pingResults);
+          // Don't save during live - will be saved when session ends
+        }
+      } else {
+        // For historical sessions, use cached or compute and save
+        analysis = getSessionAnalysis(id);
+        if (!analysis) {
+          const pingResults = getPingResults(id);
+          if (pingResults.length > 0) {
+            analysis = computeSessionAnalysis(id, pingResults);
+            saveSessionAnalysis(analysis);
+          }
+        }
+      }
+
+      if (!analysis) {
+        reply.code(404);
+        return { error: 'No data available for analysis' };
+      }
+
+      return { analysis };
+    }
+  );
 
   // Export analysis as JSON
   fastify.get<{ Params: { id: string } }>('/api/sessions/:id/export/analysis', async (request, reply) => {

@@ -27,8 +27,20 @@
   @apply bg-gray-500;
 }
 
-/* Flash border animation with reset capability */
-@keyframes flash-border {
+/* Flash border animations for different deviation types */
+
+/* Latency spike - yellow/orange */
+@keyframes flash-border-latency {
+  0% {
+    box-shadow: 0 0 0 4px rgba(234, 179, 8, 0.8), 0 0 20px rgba(234, 179, 8, 0.6);
+  }
+  100% {
+    box-shadow: 0 0 0 4px rgba(234, 179, 8, 0), 0 0 20px rgba(234, 179, 8, 0);
+  }
+}
+
+/* Packet loss - red */
+@keyframes flash-border-loss {
   0% {
     box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.8), 0 0 20px rgba(239, 68, 68, 0.6);
   }
@@ -37,8 +49,26 @@
   }
 }
 
-.flash-border {
-  animation: flash-border 500ms ease-out forwards;
+/* Jitter - blue */
+@keyframes flash-border-jitter {
+  0% {
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.8), 0 0 20px rgba(59, 130, 246, 0.6);
+  }
+  100% {
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0), 0 0 20px rgba(59, 130, 246, 0);
+  }
+}
+
+.flash-border-latency {
+  animation: flash-border-latency 500ms ease-out forwards;
+}
+
+.flash-border-loss {
+  animation: flash-border-loss 500ms ease-out forwards;
+}
+
+.flash-border-jitter {
+  animation: flash-border-jitter 500ms ease-out forwards;
 }
 
 /* Reset animation when key changes */
