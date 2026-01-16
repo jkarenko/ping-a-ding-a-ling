@@ -10,6 +10,7 @@ import {
   saveSessionAnalysis,
 } from '../db/queries.js';
 import { computeSessionAnalysis } from '../services/analysis.service.js';
+import { getDefaultGateway } from '../services/network.service.js';
 
 export function setupSessionRoutes(fastify: FastifyInstance): void {
   // Get all sessions
@@ -220,5 +221,11 @@ export function setupSessionRoutes(fastify: FastifyInstance): void {
       `attachment; filename="session-${id}-analysis.json"`
     );
     return analysis;
+  });
+
+  // Get default gateway (router IP)
+  fastify.get('/api/network/gateway', async () => {
+    const gateway = await getDefaultGateway();
+    return { gateway };
   });
 }

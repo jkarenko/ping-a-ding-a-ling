@@ -173,6 +173,7 @@ interface SessionState {
   setSessionAnalysis: (analysis: SessionAnalysis | null) => void;
   toggleTheme: () => void;
   setUIState: (state: Partial<UIState>) => void;
+  initializeDefaultTarget: () => Promise<void>;
   reset: () => void;
 }
 
@@ -329,6 +330,28 @@ export const useSessionStore = create<SessionState>((set) => ({
       saveUIState(updatedUIState);
       return { uiState: updatedUIState };
     }),
+
+  initializeDefaultTarget: async () => {
+    const state = useSessionStore.getState();
+    // Only fetch gateway if target is empty (not user-configured)
+    if (state.settings.target === '') {
+      try {
+        const response = await fetch('/api/network/gateway');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.gateway) {
+            set((s) => {
+              const updatedSettings = { ...s.settings, target: data.gateway };
+              saveSettings(updatedSettings);
+              return { settings: updatedSettings };
+            });
+          }
+        }
+      } catch {
+        // Silently fail - user can manually enter target
+      }
+    }
+  },
 
   reset: () => {
     // Clear persisted session on reset

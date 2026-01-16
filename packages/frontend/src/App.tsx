@@ -10,7 +10,7 @@ import { AnalysisPanel } from './components/AnalysisPanel';
 import { exportGraphAsPNG } from './utils/export';
 
 function App() {
-  const { theme, toggleTheme, latestStats, finalStats, isRunning, currentSession, setSessionAnalysis } = useSessionStore();
+  const { theme, toggleTheme, latestStats, finalStats, isRunning, currentSession, setSessionAnalysis, initializeDefaultTarget } = useSessionStore();
 
   // Apply persisted theme on mount
   useEffect(() => {
@@ -20,6 +20,11 @@ function App() {
       document.documentElement.classList.remove('dark');
     }
   }, []);
+
+  // Initialize default target (router IP) on mount if not set
+  useEffect(() => {
+    initializeDefaultTarget();
+  }, [initializeDefaultTarget]);
 
   // Run analysis every 10 seconds during active monitoring
   useEffect(() => {
