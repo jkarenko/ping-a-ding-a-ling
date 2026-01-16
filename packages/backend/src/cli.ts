@@ -6,10 +6,24 @@ import websocket from '@fastify/websocket';
 import fastifyStatic from '@fastify/static';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import open from 'open';
+import { exec } from 'child_process';
+import os from 'os';
 import { setupWebSocketRoutes } from './routes/websocket.js';
 import { setupSessionRoutes } from './routes/sessions.js';
 import { initDatabase } from './db/schema.js';
+
+function openBrowser(url: string): void {
+  const platform = os.platform();
+  const cmd =
+    platform === 'darwin' ? `open "${url}"` :
+    platform === 'win32' ? `start "" "${url}"` :
+    `xdg-open "${url}"`;
+  exec(cmd, (error) => {
+    if (error) {
+      console.log(`Could not open browser automatically. Open ${url} manually.`);
+    }
+  });
+}
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -108,7 +122,7 @@ async function main() {
 
     if (!noBrowser) {
       console.log('Opening browser...');
-      await open(url);
+      openBrowser(url);
     }
 
     console.log('Press Ctrl+C to stop\n');

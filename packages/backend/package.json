@@ -16,7 +16,6 @@
     "@ping/shared": "*",
     "better-sqlite3": "^11.3.0",
     "fastify": "^4.28.1",
-    "open": "^10.1.0",
     "zod": "^3.23.8"
   },
   "devDependencies": {

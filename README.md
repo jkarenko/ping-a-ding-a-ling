@@ -23,6 +23,8 @@ npx ping-a-ding-a-ling --port=8080    # use a different port
 npx ping-a-ding-a-ling --no-browser   # don't auto-open browser
 ```
 
+On Linux, auto-open requires `xdg-utils`. If it's not installed, use `--no-browser` and open `http://localhost:3001` manually.
+
 ## Data storage
 
 Session history and ping data are stored locally in a SQLite database:
